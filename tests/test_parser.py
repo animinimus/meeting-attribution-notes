@@ -39,3 +39,14 @@ def test_parse_meeting_text_from_file():
     assert len(meeting.participants) == 2
     assert len(meeting.lines) == 4
     assert meeting.lines[0].raw_label == "Speaker 1"
+
+def test_parse_named_speaker_lines():
+    raw = """
+    Alice McAliceface: Hey Bob, can you design pause hires?
+    Bob McBobface: Only if finance signs off on the runway numbers.
+    """
+    lines = parse_transcript_lines(raw)
+
+    assert len(lines) == 2
+    assert lines[0].raw_label == "Alice McAliceface"
+    assert lines[1].raw_label == "Bob McBobface"
