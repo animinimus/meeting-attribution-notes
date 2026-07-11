@@ -8,6 +8,11 @@ SPEAKER_LINE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+NAMED_LINE_PATTERN = re.compile(
+    r"^\s*(.+?)\s*:\s*(.+?)\s*$",
+    re.IGNORECASE,
+)
+
 def parse_transcript_lines(raw_text: str) -> List[TranscriptLine]:
     """Parse raw text into transcript lines."""
     lines: List[TranscriptLine] = []
@@ -27,7 +32,21 @@ def parse_transcript_lines(raw_text: str) -> List[TranscriptLine]:
                     text = text
                 )
             )
-        elif lines:
+            continue
+
+        name_match = NAMED_LINE_PATTERN.match(line)
+        if name_match:
+            name = name_match.group(1).strip()
+            text = name_match.group(2).strip()
+            lines.append(
+                TranscriptLine(
+                    raw_label = name,
+                    text = text,
+                )
+            )
+        continue
+
+        if lines:
             # if we have a line that does not have an explicit speaker, use the last speaker
             prev = lines[-1]
             lines[-1] = TranscriptLine(
