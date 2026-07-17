@@ -1,0 +1,18 @@
+00:00:00.000 --> 00:00:04.500
+Alice McAliceFace
+Hey Bob, how's the budget looking for Q3?
+00:00:05.100 --> 00:00:09.800
+Bob McBobFace
+Tight. Alice, can the design team pause new hires?
+00:00:10.200 --> 00:00:15.600
+Alice McAliceFace
+Only if finance signs off on the runway numbers.
+00:00:16.000 --> 00:00:21.300
+Bob McBobFace
+Fair. I'll send the spreadsheet after this call.
+00:00:22.000 --> 00:00:27.500
+Alice McAliceFace
+Thanks. Product also needs mockups before we commit to the hire freeze.
+00:00:28.100 --> 00:00:33.900
+Bob McBobFace
+Send me the headcount sheet and I'll review it by end of day.

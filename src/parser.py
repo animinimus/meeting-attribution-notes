@@ -44,7 +44,7 @@ def parse_transcript_lines(raw_text: str) -> List[TranscriptLine]:
                     text = text,
                 )
             )
-        continue
+            continue
 
         if lines:
             # if we have a line that does not have an explicit speaker, use the last speaker
