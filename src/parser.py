@@ -3,17 +3,141 @@ from typing import List, Optional, Tuple
 
 from src.schemas import MeetingInput, Participant, TranscriptLine
 
+# Matches speaker lines
+# E.g., Speaker 1: Hello, how are you?
+#       Speaker 2: I'm doing well, thank you!
 SPEAKER_LINE_PATTERN = re.compile(
     r"^\s*speaker\s*(\d+)\s*:\s*(.+?)\s*$",
     re.IGNORECASE,
 )
 
+
+# Matches named lines
+# E.g., Alice: Hello, how are you?
+#       Bob: I'm doing well, thank you!
 NAMED_LINE_PATTERN = re.compile(
     r"^\s*(.+?)\s*:\s*(.+?)\s*$",
     re.IGNORECASE,
 )
 
-def parse_transcript_lines(raw_text: str) -> List[TranscriptLine]:
+# Matches timestamps
+# E.g., 00:00:00.000 --> 00:00:04.500
+TIMESTAMP_PATTERN = re.compile(
+    r"^\d{2}:\d{2}:\d{2}\.\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}\.\d{3}$"
+)
+
+# Matches cue numbers
+# E.g., 1, 2, 3, ...
+CUE_NUMBER_PATTERN = re.compile(
+    r"^\d+$"
+)
+
+def is_vtt_transcript(raw_text: str) -> bool:
+    """
+    Detect WebVTT-style transcripts (Zoom, Teams)
+
+    Common examples:
+    - file starts with WEBVTT or there's a timestamp line, usually within the
+    first 30 lines
+    """
+    text = raw_text.strip()
+    if text.startswith("WEBVTT"):
+        return True
+    
+    for raw_line in raw_text.splitlines()[:30]:
+        if bool(TIMESTAMP_PATTERN.match(raw_line)):
+            return True
+
+    return False
+
+def _should_skip_vtt_metadata(line: str) -> bool:
+    """
+    Skip header and cue numbers but not dialogue
+    """
+    if not line or line == "WEBVTT" or CUE_NUMBER_PATTERN.match(line) or bool(TIMESTAMP_PATTERN.match(line)):
+        return True
+    else:
+        return False
+
+def parse_vtt_transcript_lines(raw_text: str) -> List[TranscriptLine]:
+    """
+    Parse Zoom or Teams VTT-style transcript into transcript lines.
+    """
+    lines: List[TranscriptLine] = []
+
+    # for Teams format where the speaker name is the next line
+    expect_speaker_name = False
+    pending_speaker: Optional[str] = None
+
+    for raw_line in raw_text.splitlines():
+        line = raw_line.strip()
+
+        if _should_skip_vtt_metadata(line):
+            # no vtt metadata, check for timestamp
+            if bool(TIMESTAMP_PATTERN.match(line)):
+                expect_speaker_name = True
+                pending_speaker = None
+            continue
+
+        # check for speaker line, e.g., Speaker 1: Hello, how are you? 
+        speaker_match = SPEAKER_LINE_PATTERN.match(line)
+        if speaker_match:
+            speaker_num, text = speaker_match.group(1), speaker_match.group(2)
+            lines.append(
+                TranscriptLine(
+                    raw_label = f"Speaker { speaker_num }",
+                    text = text,
+                )
+            )
+            expect_speaker_name = False
+            pending_speaker = None
+            continue
+
+        # check for named line, e.g., Alice: Hello, how are you?
+        name_match = NAMED_LINE_PATTERN.match(line)
+        if name_match:
+            name = name_match.group(1).strip()
+            text = name_match.group(2).strip()
+            lines.append(
+                TranscriptLine(
+                    raw_label = name,
+                    text = text,
+                )
+            )
+            expect_speaker_name = False
+            pending_speaker = None
+            continue
+
+        # for transcriptions with names that appear on their own line 
+        # after timestamps, e.g., Teams
+        if expect_speaker_name:
+            pending_speaker = line
+            expect_speaker_name = False
+            continue
+        
+        # handle dialogue after speaker name line
+        if pending_speaker:
+            lines.append(
+                TranscriptLine(
+                    raw_label = pending_speaker,
+                    text = line,
+                )
+            )
+            pending_speaker = None
+            continue
+
+        # if we have a line that does not have an explicit speaker, use the last speaker
+        if lines:
+            prev = lines[-1]
+            lines[-1] = TranscriptLine(
+                raw_label = prev.raw_label,
+                text = f"{prev.text} {line}"
+            )
+
+    return lines
+
+
+def parse_plain_transcript_lines(raw_text: str) -> List[TranscriptLine]:
     """Parse raw text into transcript lines."""
     lines: List[TranscriptLine] = []
 
@@ -56,6 +180,16 @@ def parse_transcript_lines(raw_text: str) -> List[TranscriptLine]:
 
     return lines
 
+def parse_transcript_lines(raw_text: str) -> List[TranscriptLine]:
+    """
+    Decide whether to parse as VTT or plain text and call the appropriate function.
+    """
+    if is_vtt_transcript(raw_text):
+        return parse_vtt_transcript_lines(raw_text)
+    else:
+        return parse_plain_transcript_lines(raw_text)
+    
+
 def split_title_from_transcript(raw_text: str) -> Tuple[str, str]:
     """Extract possible title text from the beginning of the transcript."""
     title_parts: List[str] = []
@@ -87,8 +221,12 @@ def parse_meeting_text( raw_text: str, participants: List[Participant], title: O
         In the case of no title, we try to extract it from the beginning of the transcript.
         """
         if title is None:
-            detected_title, body = split_title_from_transcript(raw_text)
-            title = detected_title # Untitle Meeting already handled
+            if is_vtt_transcript(raw_text):
+                title = "Untitled Meeting"
+                body = raw_text
+            else:
+                detected_title, body = split_title_from_transcript(raw_text)
+                title = detected_title # Untitle Meeting already handled
         else:
             body = raw_text
 

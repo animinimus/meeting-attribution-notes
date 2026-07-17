@@ -1,9 +1,41 @@
 from pathlib import Path
 
-from src.parser import parse_meeting_text, parse_transcript_lines, split_title_from_transcript
+from src.parser import (
+    parse_meeting_text, 
+    parse_transcript_lines, 
+    split_title_from_transcript,
+    is_vtt_transcript,
+)
 from src.schemas import Participant
 
 SAMPLE_PATH = Path(__file__).resolve().parents[1]/"data"/"sample_transcript.txt"
+ZOOM_PATH = Path(__file__).resolve().parents[1]/"data"/"sample_transcript_zoom.txt"
+TEAMS_PATH = Path(__file__).resolve().parents[1]/"data"/"sample_transcript_teams.txt"
+
+def test_is_vtt_transcript_zoom():
+    raw = ZOOM_PATH.read_text(encoding="utf-8")
+    assert is_vtt_transcript(raw) is True
+
+def test_is_vtt_transcript_teams():
+    raw = TEAMS_PATH.read_text(encoding="utf-8")
+    assert is_vtt_transcript(raw) is True
+
+def test_parse_zoom_vtt_lines():
+    raw = ZOOM_PATH.read_text(encoding="utf-8")
+    lines = parse_transcript_lines(raw)
+    assert len(lines) == 6
+    assert lines[0].raw_label == "Alice McAliceFace"
+    assert "budget" in lines[0].text.lower()
+    assert lines[1].raw_label == "Bob McBobFace"
+
+def test_parse_teams_vtt_lines():
+    raw = TEAMS_PATH.read_text(encoding="utf-8")
+    lines = parse_transcript_lines(raw)
+    assert len(lines) == 6
+    assert lines[0].raw_label == "Alice McAliceFace"
+    assert lines[0].text.startswith("Hey Bob")
+    assert lines[-1].raw_label == "Bob McBobFace"
+    assert "headcount" in lines[-1].text.lower()
 
 def test_parse_transcript_lines_basic():
     raw = """
