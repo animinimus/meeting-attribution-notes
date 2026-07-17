@@ -1,0 +1,27 @@
+{
+  "id": "alice_bob_q3",
+  "source_format": "simple_speaker_labels",
+  "description": "One speaker per dialogue line, in order (4 lines, 2 people).",
+  "input": {
+    "title": "Sync with Alice and Bob",
+    "participants": [
+      {
+        "name": "Alice McAliceFace",
+        "role": "design",
+        "department": "product"
+      },
+      { "name": "Bob McBobFace", "role": "finance", "department": "finance" }
+    ],
+    "transcript_file": "data/sample_transcript.txt"
+  },
+  "expected": {
+    "attributed_speakers": [
+      "Alice McAliceFace",
+      "Bob McBobFace",
+      "Alice McAliceFace",
+      "Bob McBobFace"
+    ],
+    "min_summary_bullets": 1,
+    "required_action_keywords": ["spreadsheet"]
+  }
+}
