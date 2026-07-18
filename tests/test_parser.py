@@ -37,6 +37,20 @@ def test_parse_teams_vtt_lines():
     assert lines[-1].raw_label == "Bob McBobFace"
     assert "headcount" in lines[-1].text.lower()
 
+def test_parse_unlabeled_vtt_lines():
+    """VTT with timestamp then dialogue only (no speaker name rows)."""
+    raw = """00:00:00.000 --> 00:00:05.200
+Hey Bob, how's the budget?
+00:00:05.800 --> 00:00:11.400
+Tight. Alice, can design pause hires?
+"""
+    lines = parse_transcript_lines(raw)
+    assert len(lines) == 2
+    assert lines[0].raw_label is None
+    assert "budget" in lines[0].text.lower()
+    assert lines[1].raw_label is None
+    assert "alice" in lines[1].text.lower()
+
 def test_parse_transcript_lines_basic():
     raw = """
     Speaker 1: Hey bob, Happy Monday! How are you doing today?

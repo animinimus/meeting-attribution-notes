@@ -59,6 +59,25 @@ def _should_skip_vtt_metadata(line: str) -> bool:
     else:
         return False
 
+def _looks_like_speaker_name_line(line: str) -> bool:
+    """
+    Guess whether a line is a Teams speaker-name row vs spoken dialogue.
+
+    Teams puts the display name alone on its own line, e.g. 'Alice McAliceFace'.
+    Unlabeled VTT has dialogue immediately after the timestamp with no name row.
+
+    Heuristics (not perfect):
+    - Dialogue is usually a full sentence; names are short (we use 60 chars as a cutoff).
+    - Dialogue often has . ? ! or , ; names typically do not.
+    - Names are usually 1-5 words; dialogue is often longer.
+    """
+    if len(line) > 60:
+        return False
+    if any(ch in line for ch in ".?!,"):
+        return False
+    word_count = len(line.split())
+    return 1 <= word_count <= 5
+
 def parse_vtt_transcript_lines(raw_text: str) -> List[TranscriptLine]:
     """
     Parse Zoom or Teams VTT-style transcript into transcript lines.
@@ -108,14 +127,23 @@ def parse_vtt_transcript_lines(raw_text: str) -> List[TranscriptLine]:
             pending_speaker = None
             continue
 
-        # for transcriptions with names that appear on their own line 
-        # after timestamps, e.g., Teams
+        # after a timestamp: next line may be a Teams name OR unlabeled dialogue
         if expect_speaker_name:
-            pending_speaker = line
             expect_speaker_name = False
+            if _looks_like_speaker_name_line(line):
+                # Teams, e.g. 'Alice McAliceFace' then dialogue on the following line
+                pending_speaker = line
+            else:
+                # unlabeled VTT, e.g. timestamp then 'Hey Bob, how's the budget?'
+                lines.append(
+                    TranscriptLine(
+                        raw_label = None,
+                        text = line,
+                    )
+                )
             continue
         
-        # handle dialogue after speaker name line
+        # handle dialogue after a Teams speaker name line
         if pending_speaker:
             lines.append(
                 TranscriptLine(

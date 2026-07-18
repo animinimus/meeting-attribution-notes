@@ -1,0 +1,33 @@
+00:00:00.000 --> 00:00:05.200
+Alice McAliceFace
+Hey Bob, James — quick sync before Christina joins. How's Q3 budget?
+00:00:05.800 --> 00:00:11.400
+Bob McBobFace
+Tight. Alice, design may need to freeze hires unless we see runway through December.
+00:00:12.000 --> 00:00:17.600
+James Chen
+I can delay the contractor if finance signs off. Bob, do you want numbers by Friday?
+00:00:18.200 --> 00:00:23.800
+Bob McBobFace
+Send me the headcount breakdown, Alice. I'll model scenarios over the weekend.
+00:00:24.400 --> 00:00:29.500
+Alice McAliceFace
+Got it. I'll send the spreadsheet tonight after this call.
+00:00:30.100 --> 00:00:35.200
+Christina Smith
+Sorry I'm late. James, is the API ready for the beta cohort?
+00:00:35.800 --> 00:00:41.900
+James Chen
+Almost. Christina, I still need load tests before we flip the flag.
+00:00:42.500 --> 00:00:47.300
+Christina Smith
+Loop me in on the test results. Alice, can design pause mockups until eng is green?
+00:00:47.900 --> 00:00:52.100
+Alice McAliceFace
+Only if Bob approves the hire freeze in writing.
+00:00:52.700 --> 00:00:57.400
+Bob McBobFace
+Fair. I'll email approval tonight if Alice sends the headcount sheet.
+00:00:58.000 --> 00:01:02.800
+James Chen
+I'll ping Christina when load tests pass. Bob, you'll get the infra cost estimate too.
