@@ -3,6 +3,7 @@ import streamlit as st
 from src.inference import run_meeting_analysis
 from src.parser import parse_meeting_text, is_vtt_transcript
 from src.schemas import Participant
+from src.compare_view import render_synced_comparison
 
 st.set_page_config(
     page_title = "Meeting Attribution Notes",
@@ -13,18 +14,32 @@ st.title("Meeting Attribution Notes")
 st.caption("Upload or paste a transcript to have attributed speakers and "
            "notes generated.")
 
-st.sidebar.header("Participants:")
-st.sidebar.caption("Add everyone who was in the meeting. "
-                   "This will be used to attribute speakers to notes.")
+st.sidebar.header("Participants (Optional):")
+st.sidebar.caption("Leave at 0 to infer names only from the transcript. "
+                   "Add hints when you know roles or names the model might miss. ")
 
-# demo
-p1_name = st.sidebar.text_input("Participant 1 Name", value = "Alice McAliceFace")
-p1_role = st.sidebar.text_input("Participant 1 Role", value = "design")
-p1_dept = st.sidebar.text_input("Participant 1 Department", value = "product")
+hint_count = st.sidebar.number_input(
+    "How many hints?",
+    min_value=0,
+    max_value=10,
+    value=0,
+    step=1,
+)
 
-p2_name = st.sidebar.text_input("Participant 2 Name", value = "Bob McBobFace")
-p2_role = st.sidebar.text_input("Participant 2 Role", value = "finance")
-p2_dept = st.sidebar.text_input("Participant 2 Department", value = "finance")
+participants = []
+for i in range(hint_count):
+    with st.sidebar.expander(f"Hint {i + 1}", expanded=(i < 2)):
+        name = st.text_input("Name", key=f"hint_name_{i}")
+        role = st.text_input("Role (optional)", key=f"hint_role_{i}")
+        dept = st.text_input("Department (optional)", key=f"hint_dept_{i}")
+        if name.strip():
+            participants.append(
+                Participant(
+                    name=name.strip(),
+                    role=role.strip() or None,
+                    department=dept.strip() or None,
+                )
+            )
 
 st.subheader("Transcript:")
 
@@ -65,23 +80,6 @@ if analyze_clicked:
     if not transcript_text.strip():
         st.error("Please paste or upload a transcript to analyze.")
         st.stop()
-    
-    if not p1_name.strip() or not p2_name.strip():
-        st.error("Please add both participants to analyze.")
-        st.stop()
-
-    participants = [
-        Participant(
-            name = p1_name.strip(),
-            role = p1_role.strip() or None,
-            dept = p1_dept.strip() or None,
-        ),
-        Participant(
-            name = p2_name.strip(),
-            role = p2_role.strip() or None,
-            dept = p2_dept.strip() or None,
-        ),
-    ]
 
     meeting = parse_meeting_text(
         transcript_text,
@@ -99,13 +97,15 @@ if analyze_clicked:
     st.success("Analysis complete")
 
     # display results
-    st.subheader("Attributed Lines")
-    for line in result.attributed_lines:
-        st.markdown(
-            f"**{line.confidence:.2f}%**: **{ line.speaker_name }** { line.text }"
+    st.subheader("Compare Transcripts")
+    render_synced_comparison(meeting, result, height=420)
+
+    if len(meeting.lines) != len(result.attributed_lines):
+        st.warning(
+            f"Line count mismatch: found {len(meeting.lines)} in transcript, "
+            f"but model returned {len(result.attributed_lines)} lines. "
+            "Comparison shows the overlapping rows only."
         )
-        if line.reasoning:
-            st.caption(f"Why: { line.reasoning }")
 
     col1, col2 = st.columns(2)
 
