@@ -8,6 +8,11 @@ __pycache__/
 # Secrets (API keys later)
 .env
 
+# trained model weights (use HF Hub or download separately)
+models/
+outputs/
+checkpoints/
+
 # OS / editor noise
 .DS_Store
 Thumbs.db
