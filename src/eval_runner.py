@@ -28,12 +28,21 @@ def build_meeting_from_eval(case: dict, root: Path):
     )
     return meeting
 
-def score_case(case: dict, root: Path) -> dict:
+def score_case(
+    case: dict,
+    root: Path,
+    backend: str = "hf",
+    adapter_path: str | Path | None = None,
+) -> dict:
     """
     Run model on eval case and compare it to expected output.
     """
     meeting = build_meeting_from_eval(case, root)
-    result = run_meeting_analysis(meeting)
+    result = run_meeting_analysis(
+        meeting,
+        backend=backend,
+        adapter_path=adapter_path,
+    )
 
     expected = case["expected"]
     expected_speakers = expected["attributed_speakers"]
@@ -44,7 +53,7 @@ def score_case(case: dict, root: Path) -> dict:
     ]
 
     line_count_match = len(actual_speakers) == len(expected_speakers)
-    summary_ok = len(result.summary_bullets) >= expected.get("min_smmary_bullets", 1)
+    summary_ok = len(result.summary_bullets) >= expected.get("min_summary_bullets", 1)
 
     action_text = " ".join(result.action_items).lower()
     required_keywords = expected.get("required_action_keywords", [])
