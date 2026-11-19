@@ -74,16 +74,11 @@ Details below are taken from this repository only (weights and full training rec
 
 ## Evaluation
 
-There are **no committed benchmark numbers** (no results files or CI eval job).
+There are **no committed benchmark numbers** in the repo (CI runs unit tests only). Run evals locally and save the JSON report yourself.
 
-**Bundled regression case:** `data/eval/alice_bob_q3.json` runs against `data/sample_transcript.txt` and checks:
+### Single regression case
 
-- Line count matches expected speakers  
-- Exact speaker name order  
-- At least one summary bullet  
-- Action items mention `"spreadsheet"`
-
-**Run it** (requires `HF_TOKEN` and network for the default HF backend):
+`data/eval/alice_bob_q3.json` runs against `data/sample_transcript.txt` and checks line count, speaker order, summary bullets, and action-item keywords.
 
 ```bash
 cp .env.example .env   # set HF_TOKEN
@@ -91,7 +86,42 @@ python3 scripts/run_eval.py
 python3 scripts/run_eval.py --backend local --adapter-path models/meeting-attribution-lora
 ```
 
-Implementation: `src/eval_runner.py`, `scripts/run_eval.py`.
+### Base vs LoRA speaker attribution
+
+Held-out suite: `data/eval/speaker_attribution_held_out.jsonl` — three gold-labeled meetings (indices 6–8 from `data/train/meeting_examples.jsonl`: incident hotfix, unlabeled VTT design review, Acme SSO). Metrics: **per-line speaker accuracy** (case-insensitive exact match) and **macro-averaged per-speaker F1**.
+
+| Variant | What it runs |
+|---------|----------------|
+| `base` | HF Inference API — `Qwen/Qwen2.5-7B-Instruct` (no adapter) |
+| `lora_hf` | HF API — default `Qwen/Qwen2.5-7B-Instruct:featherless-ai` endpoint |
+| `lora_local` | Local 4-bit base + LoRA under `models/meeting-attribution-lora/` |
+
+**Prerequisites**
+
+1. `HF_TOKEN` in `.env` for `base` / `lora_hf`
+2. LoRA adapter on disk for `lora_local` (see setup below)
+3. NVIDIA GPU + `pip install -r requirements-train.txt` for `lora_local` (7B 4-bit; ~8 GB+ VRAM typical)
+
+**Commands**
+
+```bash
+# Regenerate held-out JSONL from training indices 6,7,8 if needed
+python3 scripts/compare_base_vs_lora.py --write-held-out
+
+# Compare base (HF) vs local LoRA; write reproducible report
+python3 scripts/compare_base_vs_lora.py \
+  --variants base,lora_local \
+  --adapter-path models/meeting-attribution-lora \
+  --output-json results/speaker_compare_report.json
+
+# Optional: include hosted fine-tuned endpoint
+python3 scripts/compare_base_vs_lora.py --variants base,lora_hf,lora_local \
+  --output-json results/speaker_compare_report.json
+```
+
+The script prints mean line accuracy and mean macro F1, plus platform/GPU metadata in the JSON (`command`, `dataset`, `timestamp_utc`).
+
+Implementation: `src/speaker_eval.py`, `src/speaker_metrics.py`, `scripts/compare_base_vs_lora.py`.
 
 ---
 
@@ -242,6 +272,8 @@ Sample exports for other formats: `data/sample_transcript_zoom.txt`, `data/sampl
 | `src/json_parser.py` | Robust JSON extraction from model text |
 | `src/training_data.py` | JSONL → SFT chat messages |
 | `src/eval_runner.py` | Single-case regression scoring |
+| `src/speaker_eval.py` | Held-out speaker attribution eval |
+| `scripts/compare_base_vs_lora.py` | Base vs LoRA comparison CLI |
 | `app.py` | Streamlit demo |
 | `data/train/meeting_examples.jsonl` | Fine-tuning examples |
 | `data/eval/` | Regression fixtures |
